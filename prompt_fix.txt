@@ -1,3 +1,1 @@
-ubah desain dashboard.html & history.html agar mengikuti aturan desain Bugatti dari design.md. 
-Ingat, JANGAN mengubah fungsi tombol, state, routing, API fetching, atau logika bisnis yang sudah berjalan. Hanya ganti tampilan/styling-nya SAJA!
-
+gua udah buat file index.html di folder frontend yang isinya redirect otomatis ke login.html. File deploy.yml di .github/workflows/ juga udah gua lengkapi dengan pemicu on: push dan permissions. Semua kode terbaru udah sukses gua git push origin main. Tolong dicek jalurnya di GitHub Actions, apakah proses deploy frontend ke GitHub Pages udah sukses atau ada yang perlu ditiup lagi?"
