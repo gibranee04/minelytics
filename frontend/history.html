@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minelytics - History Log</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+    <div id="app" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <!-- Header -->
+      <div
+        class="flex justify-between items-center border-b border-slate-800 pb-4 mb-8"
+      >
+        <div>
+          <h1 class="text-xl font-bold text-amber-500 tracking-wider uppercase">
+            RIWAYAT LOG AKTIVITAS ARMADA
+          </h1>
+          <p class="text-xs text-slate-400 mt-1">
+            Audit Trail &amp; Durasi Penggunaan Alat Berat
+          </p>
+        </div>
+        <a
+          href="dashboard.html"
+          class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-2 rounded-lg transition text-sm font-medium"
+        >
+          Kembali ke Dashboard
+        </a>
+      </div>
+
+      <!-- Table -->
+      <div
+        class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden"
+      >
+        <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/50">
+          <h2
+            class="text-sm font-semibold text-slate-300 uppercase tracking-wider"
+          >
+            Riwayat Log
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="border-b border-slate-800">
+                <th
+                  class="pb-4 px-5 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Kode Alat
+                </th>
+                <th
+                  class="pb-4 px-5 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Jenis Alat
+                </th>
+                <th
+                  class="pb-4 px-5 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Status
+                </th>
+                <th
+                  class="pb-4 px-5 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Waktu Mulai
+                </th>
+                <th
+                  class="pb-4 px-5 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Waktu Selesai
+                </th>
+                <th
+                  class="pb-4 px-5 text-xs font-semibold text-slate-400 uppercase tracking-wider text-right"
+                >
+                  Durasi
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              <tr
+                v-for="log in historyData"
+                :key="log.id"
+                class="hover:bg-slate-800/50 transition"
+              >
+                <td class="px-5 py-4 font-mono font-bold text-white">
+                  {{ log.kode_alat }}
+                </td>
+                <td class="px-5 py-4 text-slate-300">{{ log.jenis_alat }}</td>
+                <td class="px-5 py-4">
+                  <span
+                    :class="{
+                      'text-white font-semibold': log.status === 'Operating',
+                      'text-slate-400': log.status === 'Idle',
+                      'text-slate-300 underline': log.status === 'Breakdown'
+                    }"
+                    class="text-xs uppercase tracking-wider"
+                    >{{ log.status }}</span
+                  >
+                </td>
+                <td class="px-5 py-4 text-sm text-slate-400">
+                  {{ log.waktu_mulai }}
+                </td>
+                <td class="px-5 py-4 text-sm">
+                  <span
+                    v-if="log.waktu_selesai"
+                    class="text-emerald-400 font-medium"
+                    >{{ log.waktu_selesai }}</span
+                  >
+                  <span v-else class="text-amber-400 italic">Aktif</span>
+                </td>
+                <td
+                  class="px-5 py-4 text-sm text-right font-mono font-bold text-amber-500"
+                >
+                  {{ formatDurasi(log.durasi_jam) }}
+                </td>
+              </tr>
+              <tr v-if="historyData.length === 0">
+                <td colspan="6" class="px-5 py-16 text-center text-slate-500">
+                  Belum ada riwayat log terekam.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Auto-detect API URL: local vs production
+      const API_BASE =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://localhost:5000"
+          : "";
+
+      const { createApp, ref, onMounted } = Vue;
+      createApp({
+        setup() {
+          const historyData = ref([]);
+
+          const formatDurasi = (durasiJam) => {
+            if (durasiJam === null || durasiJam === undefined) return "—";
+
+            const totalDetik = Math.round(durasiJam * 3600);
+
+            if (totalDetik < 60) {
+              return totalDetik + " detik";
+            }
+
+            if (totalDetik < 3600) {
+              const menit = Math.floor(totalDetik / 60);
+              const detik = totalDetik % 60;
+              return detik > 0
+                ? `${menit} menit ${detik} detik`
+                : `${menit} menit`;
+            }
+
+            return (totalDetik / 3600).toFixed(1) + " jam";
+          };
+
+          const fetchHistory = async () => {
+            try {
+              const response = await fetch(API_BASE + "/api/history");
+              if (response.ok) {
+                historyData.value = await response.json();
+              }
+            } catch (error) {
+              console.error("Gagal mengambil data history:", error);
+            }
+          };
+
+          onMounted(fetchHistory);
+
+          return { historyData, formatDurasi };
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>

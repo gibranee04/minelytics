@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enterprise Control Panel - Fleet Management</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+    <div id="app" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <!-- Top Nav / Header -->
+      <div
+        class="flex justify-between items-center border-b border-slate-800 pb-4 mb-8"
+      >
+        <div>
+          <h1 class="text-xl font-bold text-amber-500 tracking-wider">
+            MINELYTICS
+          </h1>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Session:
+            <span class="text-amber-400 font-semibold">{{ userRole }}</span>
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- History Log Button (RBAC: Planner only) -->
+          <button
+            v-if="userRole === 'Planner'"
+            @click="navigateToHistory"
+            class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-lg transition text-sm"
+          >
+            📋 Lihat History Log
+          </button>
+          <button
+            @click="logout"
+            class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-4 py-2 rounded-lg transition text-sm border border-slate-700"
+          >
+            Keluar
+          </button>
+        </div>
+      </div>
+
+      <!-- Form Tambah Unit (RBAC: Planner only) -->
+      <div
+        v-if="userRole === 'Planner'"
+        class="bg-slate-900 border border-slate-800 rounded-lg p-6 mb-8"
+      >
+        <h3
+          class="text-sm font-semibold text-amber-500 mb-4 tracking-wider uppercase flex items-center gap-2"
+        >
+          <span>➕</span> Tambah Unit Fleet Baru
+        </h3>
+        <form
+          @submit.prevent="addAlat"
+          class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end"
+        >
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider"
+              >KODE ALAT</label
+            >
+            <input
+              type="text"
+              v-model="formAlat.kode_alat"
+              placeholder="EXCA-01"
+              required
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 placeholder-slate-500 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition text-sm"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider"
+              >JENIS ALAT</label
+            >
+            <input
+              type="text"
+              v-model="formAlat.jenis_alat"
+              placeholder="Excavator PC2000"
+              required
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 placeholder-slate-500 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition text-sm"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider"
+              >STATUS AWAL</label
+            >
+            <select
+              v-model="formAlat.status"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-100 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition text-sm"
+            >
+              <option value="Idle">Idle (Standby)</option>
+              <option value="Operating">Operating (Bekerja)</option>
+              <option value="Breakdown">Breakdown (Rusak)</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold p-2.5 rounded-lg transition text-sm"
+          >
+            Daftarkan ke Fleet
+          </button>
+        </form>
+      </div>
+
+      <!-- Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5">
+          <p
+            class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+          >
+            Total Fleet
+          </p>
+          <p class="text-3xl font-bold text-white mt-1">
+            {{ metrics.total_alat }}
+            <span class="text-sm font-normal text-slate-400">Unit</span>
+          </p>
+          <div class="mt-3 flex gap-4 text-xs border-t border-slate-800 pt-3">
+            <span class="flex items-center gap-1.5"
+              ><span
+                class="w-2 h-2 rounded-full bg-emerald-400 inline-block"
+              ></span>
+              Ops: {{ metrics.unit_operating }}</span
+            >
+            <span class="flex items-center gap-1.5"
+              ><span
+                class="w-2 h-2 rounded-full bg-amber-400 inline-block"
+              ></span>
+              Idle: {{ metrics.unit_idle }}</span
+            >
+            <span class="flex items-center gap-1.5"
+              ><span
+                class="w-2 h-2 rounded-full bg-red-400 inline-block"
+              ></span>
+              BD: {{ metrics.unit_breakdown }}</span
+            >
+          </div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5">
+          <p
+            class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+          >
+            Physical Availability (PA)
+          </p>
+          <p class="text-3xl font-bold text-amber-500 mt-1">
+            {{ metrics.pa }}%
+          </p>
+          <p
+            class="text-[11px] text-slate-500 mt-3 border-t border-slate-800 pt-3"
+          >
+            Kesiapan fisik mekanis alat di lapangan.
+          </p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5">
+          <p
+            class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+          >
+            Use of Availability (UA)
+          </p>
+          <p class="text-3xl font-bold text-emerald-400 mt-1">
+            {{ metrics.ua }}%
+          </p>
+          <p
+            class="text-[11px] text-slate-500 mt-3 border-t border-slate-800 pt-3"
+          >
+            Efisiensi pemanfaatan unit yang siap pakai.
+          </p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5">
+          <p
+            class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+          >
+            Status Sinkronisasi
+          </p>
+          <p
+            class="text-sm font-semibold text-emerald-400 mt-1 flex items-center gap-2"
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block"
+            ></span>
+            Real-Time Connected
+          </p>
+          <p
+            class="text-[11px] text-slate-500 mt-3 border-t border-slate-800 pt-3"
+          >
+            Auto-polling log aktif setiap 15 detik.
+          </p>
+        </div>
+      </div>
+
+      <!-- Fleet Table -->
+      <div
+        class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden"
+      >
+        <div class="px-5 py-4 border-b border-slate-800">
+          <h3
+            class="text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2"
+          >
+            <span>📋</span> Kontrol Operasional &amp; Inventaris Unit
+          </h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="bg-slate-950/50">
+                <th
+                  class="px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Kode Alat
+                </th>
+                <th
+                  class="px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Jenis Alat
+                </th>
+                <th
+                  class="px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                >
+                  Status Aktual
+                </th>
+                <th
+                  class="px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                  v-if="userRole !== 'Viewer'"
+                >
+                  Aksi Kontrol Log
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              <tr
+                v-for="alat in daftarAlat"
+                :key="alat.id"
+                class="hover:bg-slate-800/50 transition"
+              >
+                <td class="px-5 py-4 font-mono font-bold text-white">
+                  {{ alat.kode_alat }}
+                </td>
+                <td class="px-5 py-4 text-slate-300">{{ alat.jenis_alat }}</td>
+                <td class="px-5 py-4">
+                  <span
+                    :class="{
+                                    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': alat.status === 'Operating',
+                                    'bg-amber-500/10 text-amber-400 border-amber-500/20': alat.status === 'Idle',
+                                    'bg-red-500/10 text-red-400 border-red-500/20': alat.status === 'Breakdown'
+                                }"
+                    class="inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold border"
+                  >
+                    {{ alat.status }}
+                  </span>
+                </td>
+                <td class="px-5 py-4" v-if="userRole !== 'Viewer'">
+                  <div class="flex gap-2 items-center">
+                    <select
+                      @change="updateStatus(alat.id, $event.target.value)"
+                      class="bg-slate-950 border border-slate-700 rounded-lg text-xs p-1.5 text-slate-300 outline-none focus:border-amber-500 transition"
+                    >
+                      <option value="" disabled selected>Ubah Status</option>
+                      <option value="Operating">Operating</option>
+                      <option value="Idle">Idle</option>
+                      <option value="Breakdown">Breakdown</option>
+                    </select>
+                    <button
+                      v-if="userRole === 'Planner'"
+                      @click="deleteAlat(alat.id)"
+                      class="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs font-medium px-3 py-1.5 rounded-lg border border-red-500/20 transition"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="daftarAlat.length === 0">
+                <td colspan="4" class="px-5 py-12 text-center text-slate-500">
+                  Belum ada unit terdaftar di database.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Auto-detect API URL: local vs production
+      const API_BASE =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://localhost:5000"
+          : "";
+
+      const { createApp, ref, onMounted } = Vue;
+      createApp({
+        setup() {
+          const metrics = ref({
+            total_alat: 0,
+            unit_operating: 0,
+            unit_idle: 0,
+            unit_breakdown: 0,
+            pa: 0,
+            ua: 0,
+          });
+          const daftarAlat = ref([]);
+          const userRole = ref("");
+          const formAlat = ref({
+            kode_alat: "",
+            jenis_alat: "",
+            status: "Idle",
+          });
+
+          const checkAuth = () => {
+            const token = localStorage.getItem("user_token");
+            const savedRole = localStorage.getItem("user_role");
+            if (!token) {
+              window.location.href = "login.html";
+            } else {
+              userRole.value = savedRole || "Viewer";
+            }
+          };
+
+          const fetchData = async () => {
+            try {
+              // Fetch Metrics agregat
+              const resMetrics = await fetch(
+                API_BASE + "/api/dashboard/metrics",
+              );
+              const dataMetrics = await resMetrics.json();
+              metrics.value = dataMetrics.metrics;
+
+              // Fetch Fleet list
+              const resFleet = await fetch(API_BASE + "/api/fleet");
+              daftarAlat.value = await resFleet.json();
+            } catch (err) {
+              console.error("Sinkronisasi REST API gagal terhubung.");
+            }
+          };
+
+          // CRUD: Create
+          const addAlat = async () => {
+            try {
+              const response = await fetch(API_BASE + "/api/fleet", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formAlat.value),
+              });
+              if (response.ok) {
+                formAlat.value = {
+                  kode_alat: "",
+                  jenis_alat: "",
+                  status: "Idle",
+                };
+                fetchData();
+              }
+            } catch (err) {
+              alert("Gagal menambahkan armada.");
+            }
+          };
+
+          // CRUD: Update (Event Log Trigger)
+          const updateStatus = async (id, statusBaru) => {
+            try {
+              const response = await fetch(
+                API_BASE + `/api/fleet/${id}/status`,
+                {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ status: statusBaru }),
+                },
+              );
+              if (response.ok) fetchData();
+            } catch (err) {
+              alert("Gagal memperbarui status.");
+            }
+          };
+
+          // CRUD: Delete
+          const deleteAlat = async (id) => {
+            if (
+              !confirm(
+                "Hapus unit ini beserta seluruh riwayat log jam kerjanya?",
+              )
+            )
+              return;
+            try {
+              const response = await fetch(
+                API_BASE + `/api/fleet/${id}`,
+                { method: "DELETE" },
+              );
+              if (response.ok) fetchData();
+            } catch (err) {
+              alert("Gagal menghapus.");
+            }
+          };
+
+          const logout = () => {
+            localStorage.clear();
+            window.location.href = "login.html";
+          };
+
+          // Navigasi ke halaman History Log
+          const navigateToHistory = () => {
+            // Tampilkan visual feedback loading sebelum navigasi
+            window.location.href = "history.html";
+          };
+
+          onMounted(() => {
+            checkAuth();
+            fetchData();
+            setInterval(fetchData, 15000); // Polling otomatis tiap 15 detik
+          });
+
+          return {
+            metrics,
+            daftarAlat,
+            userRole,
+            formAlat,
+            addAlat,
+            updateStatus,
+            deleteAlat,
+            logout,
+            navigateToHistory,
+          };
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>

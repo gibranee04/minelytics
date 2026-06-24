@@ -1,0 +1,3 @@
+ubah desain dashboard.html & history.html agar mengikuti aturan desain Bugatti dari design.md. 
+Ingat, JANGAN mengubah fungsi tombol, state, routing, API fetching, atau logika bisnis yang sudah berjalan. Hanya ganti tampilan/styling-nya SAJA!
+

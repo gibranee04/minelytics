@@ -1,0 +1,85 @@
+ROLE & TUJUAN:
+Anda adalah Senior Full-Stack Engineer dan Enterprise Software Architect. Buatkan sistem manajemen armada tambang (Fleet Management & KPI Monitor) dengan arsitektur terpisah (Decoupled/RESTful API) menggunakan Flask (Backend) dan Vue.js 3 Standalone via CDN + Tailwind CSS (Frontend). Sistem harus menerapkan kontrol akses berbasis Role (RBAC) dan fitur CRUD mutakhir berbasis event log (bukan manipulasi nilai statis).
+
+==================================================
+I. SKEMA DATABASE DATABASE (XAMPP MySQL - tambang_db)
+==================================================
+Pastikan script backend otomatis mengecek atau membuat tabel berikut jika belum ada:
+
+1. Tabel 'users':
+   - id INT PRIMARY KEY AUTO_INCREMENT
+   - username VARCHAR(50) UNIQUE NOT NULL
+   - password VARCHAR(255) NOT NULL (Plaintext untuk kemudahan simulasi dev)
+   - role ENUM('Planner', 'Supervisor', 'Viewer') NOT NULL
+
+2. Tabel 'alat_berat':
+   - id INT PRIMARY KEY AUTO_INCREMENT
+   - kode_alat VARCHAR(20) UNIQUE NOT NULL (Contoh: EXCA-01, TRUCK-05)
+   - jenis_alat VARCHAR(50) NOT NULL (Contoh: Excavator, Dump Truck, Dozer)
+   - status_terakhir ENUM('Operating', 'Idle', 'Breakdown') DEFAULT 'Idle'
+
+3. Tabel 'log_aktivitas' (Pondasi Utama Perhitungan Jam Kerja KPI):
+   - id INT PRIMARY KEY AUTO_INCREMENT
+   - alat_id INT, FOREIGN KEY REFERENCES alat_berat(id) ON DELETE CASCADE
+   - status_aktivitas ENUM('Operating', 'Idle', 'Breakdown') NOT NULL
+   - waktu_mulai DATETIME NOT NULL
+   - waktu_selesai DATETIME NULL (Jika NULL berarti aktivitas masih berjalan/aktif)
+
+*Data Awal (Seed Data) jika tabel kosong:
+- Users: ('admin', 'admin123', 'Planner'), ('spv', 'spv123', 'Supervisor')
+- Alat: ('EXCA-01', 'Excavator'), ('TRUCK-01', 'Dump Truck')
+
+==================================================
+II. BACKEND ARCHITECTURE (backend/app.py)
+==================================================
+Gunakan Flask, Flask-CORS, dan Flask-MySQLdb. Port: 5000.
+
+Endpoint List & Bisnis Logik Enterprise:
+1. POST /api/auth/login
+   - Menerima username & password. Validasi ke tabel 'users'.
+   - Return payload JSON: { "success": true, "token": "JWT-Simulated-String", "user": { "username": "...", "role": "..." } }
+
+2. GET /api/dashboard/metrics
+   - Menghitung Rumus Akurat KPI Tambang berdasarkan durasi nyata di tabel 'log_aktivitas' (Gunakan interval waktu sampai dengan NOW() jika waktu_selesai IS NULL).
+   - Rumus Dasar (Total Jam Berjalan):
+     * Scheduled Time (T) = Total Alat * 24 Jam (atau total durasi log yang tercatat)
+     * Breakdown Time (B) = Total durasi status 'Breakdown'
+     * Available Time (A) = Scheduled Time - Breakdown Time
+     * Idle Time (I) = Total durasi status 'Idle'
+     * Operating Time (O) = Available Time - Idle Time
+     * Physical Availability (PA) = (A / T) * 100
+     * Use of Availability (UA) = (O / A) * 100
+   - Return JSON metrik agregat (PA, UA, Total Unit, Unit Operating, Unit Breakdown, Unit Idle) beserta struktur array untuk Chart.js.
+
+3. CRUD ENDPOINTS (Diproteksi Berdasarkan Role di Frontend/Backend):
+   - GET /api/fleet : Mengambil semua daftar alat berat beserta status terakhir dan akumulasi jam operasionalnya.
+   - POST /api/fleet : (Akses: Planner) Menambah unit alat berat baru.
+   - PUT /api/fleet/<id>/status : (Akses: Planner & Supervisor) Mengubah status operasional alat berat. LOGIK PENTING: Saat status diubah, otomatis lakukan UPDATE pada log_aktivitas yang waktu_selesai-nya masih NULL menjadi NOW(), lalu INSERT baris log_aktivitas baru dengan status baru dan waktu_mulai = NOW().
+   - DELETE /api/fleet/<id> : (Akses: Planner Only) Menghapus unit alat berat beserta seluruh riwayat log-nya dari sistem.
+
+==================================================
+III. FRONTEND ARCHITECTURE (Vue.js 3 Standalone + Tailwind)
+==================================================
+
+File 1: frontend/login.html
+- Desain antarmuka premium (Enterprise Dark Theme).
+- State management menggunakan Vue 3 Composition API (`ref`, `reactive`).
+- Melakukan Post request ke `/api/auth/login`. Jika sukses, simpan `token`, `username`, dan `role` ke localStorage, lalu redirect ke `dashboard.html`.
+
+File 2: frontend/dashboard.html
+- Pengecekan Keamanan (Route Guard): Jika `token` tidak ditemukan di localStorage saat `onMounted`, langsung tendang balik ke `login.html`.
+- Komponen Berdasarkan Hak Akses (Role-Based UI Rendering / `v-if`):
+  * Role 'Planner': Memiliki akses penuh. Menampilkan Form Tambah Alat, Dropdown Ubah Status pada Tabel, dan Tombol Hapus Alat.
+  * Role 'Supervisor': Menampilkan Dashboard Utama dan Dropdown Ubah Status Alat. Tombol Tambah dan Hapus disembunyikan.
+  * Role 'Viewer': Hanya bisa melihat visualisasi grafik dan tabel (Read-Only). Semua kontrol manipulasi disembunyikan.
+- Fitur Visualisasi: 
+  * Grafik Ringkasan Kinerja (PA & UA Donut Chart menggunakan Chart.js) yang terupdate secara dinamis setiap kali data di-fetch.
+  * Tabel Inventory Fleet dengan badge warna status modern (Hijau = Operating, Kuning = Idle, Merah = Breakdown).
+  * Sistem Auto-Sync (Polling data reaktif dari API setiap 15 detik).
+- Fitur Logout: Membersihkan seluruh isi localStorage dan mengembalikan user ke halaman login.
+
+Hasilkan kode UTUH, BERSIH, dan SIAP DEPLOY untuk file:
+- backend/app.py
+- frontend/login.html
+- frontend/dashboard.html
+Jangan memotong kode dengan komentar seperti "// kode lainnya di sini". Berikan struktur utuh.
