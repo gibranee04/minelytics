@@ -1,0 +1,7 @@
+19:18 ~ $ cd minelytics/
+19:18 ~/minelytics $ which python3
+/home/gibrane/.local/bin/python3
+19:18 ~/minelytics $ python3 -c "import sys; print(sys.path)"
+['', '/usr/local/lib/python313.zip', '/usr/local/lib/python3.13', '/usr/local/lib/python3.13/lib-dynload', '/home/gibrane/.local/lib/python3.13/site
+-packages', '/usr/local/lib/python3.13/site-packages']
+19:18 ~/minelytics $ 
