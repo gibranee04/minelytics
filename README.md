@@ -304,14 +304,13 @@ python app.py
 ## 📸 Screenshots
 
 ### Login Page
-![Login](https://via.placeholder.com/800x400/0f172a/f59e0b?text=Minelytics+Login+Page)
+![Halaman Login](images/login.png)
 
 ### Dashboard
-![Dashboard](https://via.placeholder.com/800x400/0f172a/f59e0b?text=Minelytics+Dashboard+Metrics+%26+Fleet+Table)
+![Dashboard Utama](images/dashboard.png)
 
 ### History Log
-![History](https://via.placeholder.com/800x400/0f172a/f59e0b?text=Minelytics+History+Log+Duration+Format)
-
+![Riwayat Log](images/log.png)
 ---
 
 ## 🤝 Kontribusi
